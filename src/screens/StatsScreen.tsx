@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Header } from '../components/Header'
 import { Screen } from '../components/Screen'
 import { WeightChart } from '../components/Weight'
+import { PushSettings } from '../components/PushSettings'
 import {
   Brain,
   ChevronRight,
@@ -212,6 +213,8 @@ export function StatsScreen() {
       </section>
 
       {/* settings + export */}
+      <PushSettings />
+
       <section className="space-y-2">
         <button
           onClick={() => setShowSettings(true)}
