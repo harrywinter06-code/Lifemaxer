@@ -5,8 +5,8 @@ import { TrainScreen } from './screens/TrainScreen'
 import { EatScreen } from './screens/EatScreen'
 import { StatsScreen } from './screens/StatsScreen'
 import { NowScreen } from './screens/NowScreen'
+import { CoachScreen } from './screens/CoachScreen'
 import { OnboardingWizard } from './screens/OnboardingWizard'
-import { PlaceholderScreen } from './screens/PlaceholderScreen'
 import { getProfile } from './db/repo'
 
 type AppStatus = 'loading' | 'onboarding' | 'ready'
@@ -47,7 +47,7 @@ export default function App() {
       {tab === 'now'   && <NowScreen onGoTo={(t) => setTab(t)} />}
       {tab === 'train' && <TrainScreen onFinish={() => setTab('now')} />}
       {tab === 'eat'   && <EatScreen />}
-      {tab === 'coach' && <PlaceholderScreen title="COACH" hint="AI coach (Phase 7)." />}
+      {tab === 'coach' && <CoachScreen />}
       {tab === 'stats' && <StatsScreen />}
       <InstallHint />
       <Nav active={tab} onChange={setTab} />
