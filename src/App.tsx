@@ -1,13 +1,27 @@
+import { useState } from 'react'
+import { Nav, type Tab } from './components/Nav'
+import { TrainScreen } from './screens/TrainScreen'
+import { PlaceholderScreen } from './screens/PlaceholderScreen'
+
 export default function App() {
+  const [tab, setTab] = useState<Tab>('train')
+
   return (
-    <div className="min-h-full safe-pt safe-pb safe-px flex flex-col items-center justify-center text-center">
-      <div className="font-display text-volt text-7xl tracking-[0.2em] leading-none">
-        DRILL
-      </div>
-      <div className="mt-3 shout text-dim text-sm">PHASE 0 — TOOLCHAIN UP</div>
-      <div className="mt-10 num text-text/80 text-xs">
-        v0 · tap-tested on iOS · offline-first
-      </div>
+    <div className="min-h-full">
+      {tab === 'now' && (
+        <PlaceholderScreen title="NOW" hint="Drill-sergeant command center (Phase 5)." />
+      )}
+      {tab === 'train' && <TrainScreen onFinish={() => setTab('now')} />}
+      {tab === 'eat' && (
+        <PlaceholderScreen title="EAT" hint="Macro tracker + meal plan (Phase 3)." />
+      )}
+      {tab === 'coach' && (
+        <PlaceholderScreen title="COACH" hint="AI coach chat (Phase 7)." />
+      )}
+      {tab === 'stats' && (
+        <PlaceholderScreen title="STATS" hint="Trends + settings (Phase 4)." />
+      )}
+      <Nav active={tab} onChange={setTab} />
     </div>
   )
 }
