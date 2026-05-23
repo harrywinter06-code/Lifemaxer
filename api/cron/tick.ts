@@ -13,10 +13,12 @@ export default {
   async fetch(req: Request): Promise<Response> {
     // External cron caller attaches Authorization: Bearer <CRON_SECRET>
     // (Vercel Cron also sends x-vercel-cron — preserved for when crons are re-wired).
-    const auth = req.headers.get('authorization')
+    const auth = req.headers.get('authorization') ?? ''
     const secret = process.env.CRON_SECRET
     const vercelCron = req.headers.get('x-vercel-cron')
-    if (!vercelCron && (!secret || auth !== `Bearer ${secret}`)) {
+    // RFC 7235: the scheme name is case-insensitive.
+    const match = auth.match(/^bearer\s+(.+)$/i)
+    if (!vercelCron && (!secret || !match || match[1] !== secret)) {
       return j({ error: 'forbidden' }, 403)
     }
 
