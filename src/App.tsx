@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Nav, type Tab } from './components/Nav'
 import { TrainScreen } from './screens/TrainScreen'
 import { EatScreen } from './screens/EatScreen'
+import { StatsScreen } from './screens/StatsScreen'
 import { PlaceholderScreen } from './screens/PlaceholderScreen'
 
 export default function App() {
@@ -17,9 +18,7 @@ export default function App() {
       {tab === 'coach' && (
         <PlaceholderScreen title="COACH" hint="AI coach chat (Phase 7)." />
       )}
-      {tab === 'stats' && (
-        <PlaceholderScreen title="STATS" hint="Trends + settings (Phase 4)." />
-      )}
+      {tab === 'stats' && <StatsScreen />}
       <Nav active={tab} onChange={setTab} />
     </div>
   )
