@@ -3,6 +3,7 @@ import { Header } from '../components/Header'
 import { Screen } from '../components/Screen'
 import { WeightChart } from '../components/Weight'
 import { PushSettings } from '../components/PushSettings'
+import { SyncSettings } from '../components/SyncSettings'
 import {
   Brain,
   ChevronRight,
@@ -213,6 +214,7 @@ export function StatsScreen() {
       </section>
 
       {/* settings + export */}
+      <SyncSettings onChange={refresh} />
       <PushSettings />
 
       <section className="space-y-2">
@@ -294,6 +296,11 @@ function PainSlider({
 }
 
 function ExportButton() {
+  const [lastTs, setLastTs] = useState<number | null>(() => {
+    if (typeof localStorage === 'undefined') return null
+    const v = localStorage.getItem('drill:lastExportAt')
+    return v ? parseInt(v) : null
+  })
   const onExport = async () => {
     const data = await exportAll()
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
@@ -305,11 +312,23 @@ function ExportButton() {
     a.click()
     a.remove()
     URL.revokeObjectURL(url)
+    const ts = Date.now()
+    localStorage.setItem('drill:lastExportAt', String(ts))
+    setLastTs(ts)
   }
+  // eslint-disable-next-line react-hooks/purity -- display-only "days ago"; intentional re-eval on render
+  const daysAgo = lastTs ? Math.floor((Date.now() - lastTs) / 86400000) : null
+  const stale = daysAgo === null || daysAgo >= 7
   return (
-    <button onClick={onExport} className="btn w-full">
-      EXPORT DATA (JSON)
-    </button>
+    <div className="space-y-1">
+      <button onClick={onExport} className={`w-full ${stale ? 'btn-volt' : 'btn'}`}>
+        EXPORT DATA (JSON)
+      </button>
+      <p className="text-[10px] text-dim text-center shout tracking-widest">
+        Last manual export: {lastTs ? `${daysAgo}d ago` : 'never'}
+        {stale ? ' · DUE FOR BACKUP' : ''}
+      </p>
+    </div>
   )
 }
 

@@ -7,9 +7,12 @@ import { StatsScreen } from './screens/StatsScreen'
 import { NowScreen } from './screens/NowScreen'
 import { CoachScreen } from './screens/CoachScreen'
 import { OnboardingWizard } from './screens/OnboardingWizard'
+import { CloudRestorePrompt } from './screens/CloudRestorePrompt'
 import { getProfile } from './db/repo'
+import { requestPersistent } from './lib/storage'
+import { fetchRemoteMeta, isConfigured, startAutoSync } from './lib/sync'
 
-type AppStatus = 'loading' | 'onboarding' | 'ready'
+type AppStatus = 'loading' | 'cloud-prompt' | 'onboarding' | 'ready'
 
 export default function App() {
   const [status, setStatus] = useState<AppStatus>('loading')
@@ -21,8 +24,26 @@ export default function App() {
   useEffect(() => {
     let cancelled = false
     ;(async () => {
+      // Best-effort: ask iOS / browser to treat our storage as durable.
+      // No-op if unsupported; ignored if the prompt is denied.
+      await requestPersistent()
+
       const p = await getProfile()
       if (cancelled) return
+
+      // Fresh install + cloud sync configured + cloud has data? Offer restore.
+      if (!p.onboarded && isConfigured()) {
+        const meta = await fetchRemoteMeta()
+        if (cancelled) return
+        if (meta && meta.uploadedAt) {
+          setStatus('cloud-prompt')
+          return
+        }
+      }
+
+      // Subscribe writes -> debounced cloud upload (no-op if not configured).
+      startAutoSync()
+
       setStatus(p.onboarded ? 'ready' : 'onboarding')
     })()
     return () => {
@@ -36,6 +57,10 @@ export default function App() {
         <div className="font-display text-volt text-5xl tracking-[0.2em]">DRILL</div>
       </div>
     )
+  }
+
+  if (status === 'cloud-prompt') {
+    return <CloudRestorePrompt onDone={reboot} />
   }
 
   if (status === 'onboarding') {

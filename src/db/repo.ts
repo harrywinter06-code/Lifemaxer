@@ -14,6 +14,7 @@ import type {
 } from './types'
 import { DEFAULT_PROFILE } from '../data/seed'
 import { todayISO } from '../lib/date'
+import { notifyWrite } from '../lib/syncBus'
 
 // ---------- profile ----------
 
@@ -28,13 +29,16 @@ export async function updateProfile(patch: Partial<Profile>): Promise<Profile> {
   const cur = await getProfile()
   const next: Profile = { ...cur, ...patch, id: 1 }
   await db.profile.put(next)
+  notifyWrite()
   return next
 }
 
 // ---------- sessions ----------
 
 export async function addSession(s: Omit<WorkoutSession, 'id'>): Promise<number> {
-  return (await db.sessions.add(s as WorkoutSession)) as number
+  const id = (await db.sessions.add(s as WorkoutSession)) as number
+  notifyWrite()
+  return id
 }
 
 export async function listSessions(): Promise<WorkoutSession[]> {
@@ -61,6 +65,7 @@ export async function lastSessionForExercise(
 
 export async function putBodyweight(date: string, kg: number): Promise<void> {
   await db.bodyweight.put({ date, kg })
+  notifyWrite()
 }
 
 export async function listBodyweight(): Promise<BodyweightEntry[]> {
@@ -94,11 +99,13 @@ export async function addNutrition(
     carbs: cur.carbs + delta.carbs,
   }
   await db.nutrition.put(next)
+  notifyWrite()
   return next
 }
 
 export async function setNutrition(n: NutritionDay): Promise<void> {
   await db.nutrition.put(n)
+  notifyWrite()
 }
 
 // ---------- readiness ----------
@@ -109,12 +116,14 @@ export async function getReadiness(date: string = todayISO()): Promise<Readiness
 
 export async function putReadiness(r: Readiness): Promise<void> {
   await db.readiness.put(r)
+  notifyWrite()
 }
 
 // ---------- pain ----------
 
 export async function putPain(p: PainEntry): Promise<void> {
   await db.pain.put(p)
+  notifyWrite()
 }
 
 export async function listPain(): Promise<PainEntry[]> {
@@ -138,6 +147,7 @@ export async function getChecklist(date: string = todayISO()): Promise<Checklist
 
 export async function setChecklist(c: Checklist): Promise<void> {
   await db.checklist.put(c)
+  notifyWrite()
 }
 
 export async function patchChecklist(
@@ -147,6 +157,7 @@ export async function patchChecklist(
   const cur = await getChecklist(date)
   const next = { ...cur, ...patch }
   await db.checklist.put(next)
+  notifyWrite()
   return next
 }
 
@@ -158,10 +169,12 @@ export async function getSwap(exId: string): Promise<Swap | undefined> {
 
 export async function setSwap(s: Swap): Promise<void> {
   await db.swaps.put(s)
+  notifyWrite()
 }
 
 export async function clearSwap(exId: string): Promise<void> {
   await db.swaps.delete(exId)
+  notifyWrite()
 }
 
 export async function listSwaps(): Promise<Swap[]> {
@@ -176,10 +189,12 @@ export async function getMealSwap(mealId: string): Promise<MealSwap | undefined>
 
 export async function setMealSwap(m: MealSwap): Promise<void> {
   await db.mealSwaps.put(m)
+  notifyWrite()
 }
 
 export async function clearMealSwap(mealId: string): Promise<void> {
   await db.mealSwaps.delete(mealId)
+  notifyWrite()
 }
 
 export async function listMealSwaps(): Promise<MealSwap[]> {
@@ -194,10 +209,12 @@ export async function getGrocery(item: string): Promise<GroceryState | undefined
 
 export async function setGrocery(g: GroceryState): Promise<void> {
   await db.groceries.put(g)
+  notifyWrite()
 }
 
 export async function resetGroceries(): Promise<void> {
   await db.groceries.clear()
+  notifyWrite()
 }
 
 export async function listGroceries(): Promise<GroceryState[]> {
@@ -207,7 +224,9 @@ export async function listGroceries(): Promise<GroceryState[]> {
 // ---------- chat ----------
 
 export async function addChat(m: Omit<ChatMsg, 'id'>): Promise<number> {
-  return (await db.chat.add(m as ChatMsg)) as number
+  const id = (await db.chat.add(m as ChatMsg)) as number
+  notifyWrite()
+  return id
 }
 
 export async function listChat(): Promise<ChatMsg[]> {
@@ -216,6 +235,7 @@ export async function listChat(): Promise<ChatMsg[]> {
 
 export async function clearChat(): Promise<void> {
   await db.chat.clear()
+  notifyWrite()
 }
 
 // ---------- export ----------
@@ -260,4 +280,65 @@ export async function exportAll(): Promise<Record<string, unknown>> {
     groceries,
     chat,
   }
+}
+
+// ---------- import (cloud restore) ----------
+
+type Snapshot = {
+  profile?: Profile[]
+  sessions?: WorkoutSession[]
+  bodyweight?: BodyweightEntry[]
+  nutrition?: NutritionDay[]
+  readiness?: Readiness[]
+  pain?: PainEntry[]
+  checklist?: Checklist[]
+  swaps?: Swap[]
+  mealSwaps?: MealSwap[]
+  groceries?: GroceryState[]
+  chat?: ChatMsg[]
+}
+
+/** Replace local data with a snapshot (e.g. restored from cloud). */
+export async function importAll(snap: Snapshot): Promise<void> {
+  await db.transaction(
+    'rw',
+    [db.profile, db.sessions, db.bodyweight, db.nutrition, db.readiness,
+     db.pain, db.checklist, db.swaps, db.mealSwaps, db.groceries, db.chat],
+    async () => {
+      if (snap.profile) {
+        await db.profile.clear()
+        if (snap.profile.length > 0) await db.profile.bulkPut(snap.profile)
+      }
+      if (snap.sessions) {
+        await db.sessions.clear()
+        // strip ids so Dexie reassigns; preserves chronological order via date.
+        const sanitized = snap.sessions.map((s) => {
+          const { id: _id, ...rest } = s
+          void _id
+          return rest as WorkoutSession
+        })
+        if (sanitized.length > 0) await db.sessions.bulkAdd(sanitized)
+      }
+      if (snap.bodyweight) { await db.bodyweight.clear(); if (snap.bodyweight.length) await db.bodyweight.bulkPut(snap.bodyweight) }
+      if (snap.nutrition)  { await db.nutrition.clear();  if (snap.nutrition.length)  await db.nutrition.bulkPut(snap.nutrition) }
+      if (snap.readiness)  { await db.readiness.clear();  if (snap.readiness.length)  await db.readiness.bulkPut(snap.readiness) }
+      if (snap.pain)       { await db.pain.clear();       if (snap.pain.length)       await db.pain.bulkPut(snap.pain) }
+      if (snap.checklist)  { await db.checklist.clear();  if (snap.checklist.length)  await db.checklist.bulkPut(snap.checklist) }
+      if (snap.swaps)      { await db.swaps.clear();      if (snap.swaps.length)      await db.swaps.bulkPut(snap.swaps) }
+      if (snap.mealSwaps)  { await db.mealSwaps.clear();  if (snap.mealSwaps.length)  await db.mealSwaps.bulkPut(snap.mealSwaps) }
+      if (snap.groceries)  { await db.groceries.clear();  if (snap.groceries.length)  await db.groceries.bulkPut(snap.groceries) }
+      if (snap.chat)       {
+        await db.chat.clear()
+        if (snap.chat.length) {
+          const sanitized = snap.chat.map((c) => {
+            const { id: _id, ...rest } = c
+            void _id
+            return rest as ChatMsg
+          })
+          await db.chat.bulkAdd(sanitized)
+        }
+      }
+    },
+  )
+  notifyWrite()
 }
