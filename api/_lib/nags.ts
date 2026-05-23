@@ -1,4 +1,4 @@
-import type { Nag } from './push'
+import type { Nag } from './push.js'
 
 type Schedule = { wake: string; train: string; bed: string }
 

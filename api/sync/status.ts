@@ -2,7 +2,9 @@
 // Header: Authorization: Bearer <SYNC_TOKEN>
 // Returns just the metadata (no snapshot body) — used for "last synced" UI.
 
-import { redis } from '../_lib/redis'
+import { redis } from '../_lib/redis.js'
+
+export const config = { runtime: 'edge' }
 
 export default async function handler(req: Request): Promise<Response> {
   if (req.method !== 'GET') return j({ error: 'GET only' }, 405)

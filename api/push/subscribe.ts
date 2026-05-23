@@ -4,32 +4,34 @@
 // Stores the subscription in Upstash so the cron tick can fire nags.
 // Node runtime (web-push isn't Edge-compatible).
 
-import { redis, KEYS, hash } from '../_lib/redis'
-import type { StoredSubscription } from '../_lib/push'
+import { redis, KEYS, hash } from '../_lib/redis.js'
+import type { StoredSubscription } from '../_lib/push.js'
 
-export default async function handler(req: Request): Promise<Response> {
-  if (req.method !== 'POST') return j({ error: 'POST only' }, 405)
+export default {
+  async fetch(req: Request): Promise<Response> {
+    if (req.method !== 'POST') return j({ error: 'POST only' }, 405)
 
-  let body: unknown
-  try { body = await req.json() } catch { return j({ error: 'bad json' }, 400) }
-  const v = validate(body)
-  if (!v) return j({ error: 'invalid payload' }, 400)
+    let body: unknown
+    try { body = await req.json() } catch { return j({ error: 'bad json' }, 400) }
+    const v = validate(body)
+    if (!v) return j({ error: 'invalid payload' }, 400)
 
-  try {
-    const stored: StoredSubscription = {
-      endpoint: v.subscription.endpoint,
-      keys: v.subscription.keys,
-      schedule: v.schedule,
-      tz: v.tz,
-      createdAt: Date.now(),
+    try {
+      const stored: StoredSubscription = {
+        endpoint: v.subscription.endpoint,
+        keys: v.subscription.keys,
+        schedule: v.schedule,
+        tz: v.tz,
+        createdAt: Date.now(),
+      }
+      const key = KEYS.sub(stored.endpoint)
+      await redis().set(key, JSON.stringify(stored))
+      await redis().sadd(KEYS.subList, hash(stored.endpoint))
+      return j({ ok: true, endpointHash: hash(stored.endpoint) })
+    } catch (e) {
+      return j({ error: 'storage failed', detail: String(e), configMissing: true }, 503)
     }
-    const key = KEYS.sub(stored.endpoint)
-    await redis().set(key, JSON.stringify(stored))
-    await redis().sadd(KEYS.subList, hash(stored.endpoint))
-    return j({ ok: true, endpointHash: hash(stored.endpoint) })
-  } catch (e) {
-    return j({ error: 'storage failed', detail: String(e), configMissing: true }, 503)
-  }
+  },
 }
 
 type Valid = {

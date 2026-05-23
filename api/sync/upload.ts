@@ -4,7 +4,9 @@
 //
 // Stores a single latest snapshot under sync:snapshot. Single-tenant.
 
-import { redis } from '../_lib/redis'
+import { redis } from '../_lib/redis.js'
+
+export const config = { runtime: 'edge' }
 
 export default async function handler(req: Request): Promise<Response> {
   if (req.method !== 'POST') return j({ error: 'POST only' }, 405)
