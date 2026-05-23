@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Nav, type Tab } from './components/Nav'
+import { InstallHint } from './components/InstallHint'
 import { TrainScreen } from './screens/TrainScreen'
 import { EatScreen } from './screens/EatScreen'
 import { StatsScreen } from './screens/StatsScreen'
@@ -48,6 +49,7 @@ export default function App() {
       {tab === 'eat'   && <EatScreen />}
       {tab === 'coach' && <PlaceholderScreen title="COACH" hint="AI coach (Phase 7)." />}
       {tab === 'stats' && <StatsScreen />}
+      <InstallHint />
       <Nav active={tab} onChange={setTab} />
     </div>
   )

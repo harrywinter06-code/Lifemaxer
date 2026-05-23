@@ -31,7 +31,7 @@ import type {
   Profile,
   Readiness,
 } from '../db/types'
-import { todayISO } from '../lib/date'
+import { addDays, todayISO } from '../lib/date'
 
 export function NowScreen({ onGoTo }: { onGoTo: (t: 'train' | 'eat' | 'stats') => void }) {
   const [profile, setProfile] = useState<Profile | null>(null)
@@ -43,14 +43,20 @@ export function NowScreen({ onGoTo }: { onGoTo: (t: 'train' | 'eat' | 'stats') =
 
   const refresh = async () => {
     const today = todayISO()
-    const [p, r, n, c, bw] = await Promise.all([
+    const [p, r, n, c, bw, yest] = await Promise.all([
       getProfile(),
       getReadiness(),
       getNutrition(),
       getChecklist(),
       listBodyweight(),
+      getChecklist(addDays(today, -1)),
     ])
-    setProfile(p)
+    // If yesterday's lights-out was missed, reset the streak before display.
+    let live = p
+    if (p.bedStreak > 0 && !yest.sleep && !c.sleep) {
+      live = await updateProfile({ bedStreak: 0 })
+    }
+    setProfile(live)
     setReadinessState(r)
     setNutritionState(n)
     setChecklistState(c)
