@@ -1,0 +1,89 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+    background: #0b0b0c;
+    color: #f4f1ea;
+  }
+  body {
+    margin: 0;
+    font-family: 'Archivo', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overscroll-behavior-y: none;
+  }
+  ::selection {
+    background: #d4ff2e;
+    color: #0b0b0c;
+  }
+  input,
+  textarea,
+  button,
+  select {
+    font: inherit;
+    color: inherit;
+  }
+  /* Hide spinners on number inputs */
+  input[type='number']::-webkit-outer-spin-button,
+  input[type='number']::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input[type='number'] {
+    -moz-appearance: textfield;
+  }
+}
+
+@layer components {
+  .shout {
+    @apply font-display uppercase tracking-wider;
+  }
+  .panel {
+    @apply bg-panel border border-line rounded-xl;
+  }
+  .panel-tight {
+    @apply panel p-3;
+  }
+  .panel-pad {
+    @apply panel p-4;
+  }
+  .btn {
+    @apply shout text-sm px-4 py-3 rounded-lg border border-line bg-panel2 active:scale-[0.98] transition;
+  }
+  .btn-volt {
+    @apply btn bg-volt text-bg border-volt;
+  }
+  .btn-bad {
+    @apply btn bg-bad text-bg border-bad;
+  }
+  .num {
+    @apply font-mono tabular-nums;
+  }
+  .chip {
+    @apply text-xs shout px-2 py-1 rounded border border-line bg-panel2 text-dim;
+  }
+  .chip-volt {
+    @apply chip border-volt text-volt;
+  }
+  .chip-bad {
+    @apply chip border-bad text-bad;
+  }
+  .chip-warn {
+    @apply chip border-warn text-warn;
+  }
+  .safe-pt {
+    padding-top: max(env(safe-area-inset-top), 0px);
+  }
+  .safe-pb {
+    padding-bottom: max(env(safe-area-inset-bottom), 0px);
+  }
+  .safe-px {
+    padding-left: max(env(safe-area-inset-left), 12px);
+    padding-right: max(env(safe-area-inset-right), 12px);
+  }
+}
